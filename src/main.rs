@@ -35,12 +35,17 @@ pub struct Variant {
 fn read_excel_file_and_map(path: String) -> Result<Vec<Product>, Error> {
     let mut res: Vec<Product> = Vec::new();
     let mut workbook: Xlsx<_> = open_workbook(path).unwrap();
-    let range = workbook.worksheet_range("Sheet1");
+    let range = workbook.worksheet_range_at(0);
 
-    if range.is_err() {
+    if range.is_none() {
         return Err("Error reading excel file".into());
     } 
     let range = range.unwrap();
+    if range.is_err() {
+        return Err("Error reading excel file".into());
+    }
+    let range = range.unwrap();
+    
     let mut iter = RangeDeserializerBuilder::new().from_range(&range).unwrap();
     loop {
         if let Some(result) = iter.next() {
