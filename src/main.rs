@@ -61,12 +61,30 @@ fn read_excel_file_and_map(path: String) -> Result<Vec<Product>, Error> {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+
+    println!("Checking Environment Variables");
+    if std::env::var("SHOPIFY_API_URL").is_err() {
+        println!("SHOPIFY_API_URL not set");
+        return;
+    }
+    if std::env::var("SHOPIFY_API_KEY").is_err() {
+        println!("SHOPIFY_API_KEY not set");
+        return;
+    }
+    if std::env::var("SHOPIFY_API_PASSWORD").is_err() {
+        println!("SHOPIFY_API_PASSWORD not set");
+        return;
+    }
+    println!("Environment Variables OK");
+
+    println!("Starting");
     
     let upload_key: String;
     let download_url = bulk_fetch_operation().await;
 
     match download_url {
         Ok(url) => {
+            println!("Downloading file");
             let response = reqwest::get(url)
                 .await
                 .unwrap();
@@ -83,8 +101,13 @@ async fn main() {
     }
     
     let barcode_id_map = read_jsonl_to_map("tmp/res.jsonl");
+    if barcode_id_map.is_err() {
+        println!("Error reading JSONL file");
+        return;
+    }
+    let barcode_id_map = barcode_id_map.unwrap();
     
-    File::create("tmp/upload.jsonl").unwrap();
+    File::create("tmp/upload.jsonl").expect("Unable to create file");
     
     let files = FileDialog::new()
         .add_filter("Excel Files", &["xlsx", "xls"])
@@ -92,11 +115,24 @@ async fn main() {
         .pick_files();
 
     for file in files.unwrap() {
-        let products = read_excel_file_and_map(file.into_os_string().into_string().unwrap());
+        let file_string = file.into_os_string().into_string();
+        if file_string.is_err() {
+            println!("Error reading file");
+            return;
+        }
+        let file = file_string.unwrap();
+
+        let products = read_excel_file_and_map(file);
         if products.is_err() {
             println!("Error reading excel file");
             return;
         }
+        
+        if products.is_err() {
+            println!("Error reading excel file");
+            return;
+        }
+
         write_to_jsonln(products.unwrap(), barcode_id_map.clone());
     }
 
@@ -110,8 +146,12 @@ async fn main() {
         }
     }
 
-    bulk_update_operation(upload_key).await;
+    bulk_update_operation(upload_key).await.expect("Error updating products");
 
     println!("Done");
+    println!("Press enter to exit");
+    std::io::stdin().read_line(&mut String::new())
+      .ok()
+      .expect("Failed to read line");
 }
 
