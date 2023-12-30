@@ -91,7 +91,7 @@ async fn main() {
     println!("Please press c + Enter to set to clear offers mode, otherwise press Enter to set to upload offers mode");
     match std::io::stdin().read_line(&mut user_input){
         Ok(_n) => {
-            if user_input.starts_with('c') {
+            if user_input.starts_with('c') || user_input.starts_with('C') {
                 clear_flag = true;
                 println!("Clear Mode Selected");
             } else {
