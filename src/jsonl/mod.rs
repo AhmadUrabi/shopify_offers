@@ -23,6 +23,21 @@ pub fn write_to_jsonln(products: Vec<Product>, map: HashMap<String,String>) {
     }
 }
 
+pub fn write_to_jsonln_clear(products: Vec<Product>, map: HashMap<String,String>) {
+    let mut file = OpenOptions::new().write(true).append(true).open("tmp/upload.jsonl");
+    if file.is_err() {
+        file = File::create("tmp/upload.jsonl");
+    }
+    let mut file = file.unwrap();
+    for product in products {
+        if map.get(&product.barcode).is_none() {
+            continue;
+        }
+        file.write(format!("{{\"input\":{{\"id\":\"{}\",\"price\":{:.2},\"compareAtPrice\":null}}}}\n", map.get(&product.barcode).unwrap().replace("/", "\\/"), product.rsp).as_bytes())
+            .expect("Unable to write data");
+    }
+}
+
 
 pub fn read_jsonl_to_map(path: &str) -> Result<HashMap<String, String>, std::io::Error> {
     let mut map: HashMap<String, String> = HashMap::new();

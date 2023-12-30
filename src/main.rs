@@ -14,7 +14,7 @@ use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 
 use crate::bulk_operations::{bulk_fetch_operation, bulk_update_operation, upload_file_to_shopify};
-use crate::jsonl::{read_jsonl_to_map, write_to_jsonln};
+use crate::jsonl::{read_jsonl_to_map, write_to_jsonln, write_to_jsonln_clear};
 
 pub struct Product {
     pub barcode: String,
@@ -83,6 +83,26 @@ async fn main() {
     println!("Environment Variables OK");
 
     println!("Starting");
+
+    // Get user input to set or clear
+
+    let mut clear_flag:bool = false;
+    let mut user_input: String = String::new();
+    println!("Please press c + Enter to set to clear offers mode, otherwise press Enter to set to upload offers mode");
+    match std::io::stdin().read_line(&mut user_input){
+        Ok(_n) => {
+            if user_input.starts_with('c') {
+                clear_flag = true;
+                println!("Clear Mode Selected");
+            } else {
+                clear_flag = false;
+                println!("Offer Input Mode Selected");
+            }
+        },
+        Err(_E) => {
+            println!("Unable to read input, defaulting to offer input mode");
+        }
+    }
     
     let upload_key: String;
     let download_url = bulk_fetch_operation().await;
@@ -119,6 +139,8 @@ async fn main() {
         .set_directory("/")
         .pick_files();
 
+    
+
     for file in files.unwrap() {
         let file_string = file.into_os_string().into_string();
         if file_string.is_err() {
@@ -137,8 +159,11 @@ async fn main() {
             println!("Error reading excel file");
             return;
         }
-
-        write_to_jsonln(products.unwrap(), barcode_id_map.clone());
+        if !clear_flag {
+            write_to_jsonln(products.unwrap(), barcode_id_map.clone());
+        } else {
+            write_to_jsonln_clear(products.unwrap(), barcode_id_map.clone());
+        }
     }
 
     match upload_file_to_shopify().await {
